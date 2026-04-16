@@ -1,0 +1,3 @@
+streamlit
+matplotlib
+svgpath2mpl
