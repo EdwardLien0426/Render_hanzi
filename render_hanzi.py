@@ -33,13 +33,15 @@ def render_char(ch):
         st.error("此字沒有筆畫資料")
         return
 
-    fig, ax = plt.subplots(figsize=(5, 5))
+    # 1. 建立畫布時，將面色 (facecolor) 設為 None (代表透明)
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='none')
     ax.set_aspect("equal")
     ax.axis("off")
-    fig.patch.set_facecolor("white")
 
-    # x: 左右稍微留白
-    # y: 漢字的基準線 (baseline) 在 0，有些筆畫會低於 0，最高點約在 900，所以設定 -150 到 950
+    # 2. 強制設定軸的背景也為透明
+    ax.set_facecolor("none")
+
+    # 座標設定 (使用之前修正過的 Y 軸朝上邏輯)
     ax.set_xlim(-50, 1074)
     ax.set_ylim(-150, 950)
 
@@ -48,7 +50,6 @@ def render_char(ch):
         try:
             path = parse_path(d)
             color = STROKE_COLORS[i % len(STROKE_COLORS)]
-
             patch = PathPatch(
                 path,
                 facecolor=color,
@@ -60,12 +61,8 @@ def render_char(ch):
         except Exception as e:
             errors.append(f"第 {i + 1} 筆：{e}")
 
-    if errors:
-        with st.expander(f"⚠️ {len(errors)} 個筆畫解析失敗"):
-            for err in errors:
-                st.text(err)
-
-    st.pyplot(fig)
+    # 3. 關鍵：在 streamlit 顯示時，告知 matplotlib 使用透明背景
+    st.pyplot(fig, transparent=True)
     plt.close(fig)
 
 # ── 介面 ──
