@@ -64,23 +64,33 @@ TRANSLATIONS = {
     },
 }
 
-# Background / text / input colors for each theme.
+# Background / text / input / button colors for each theme.
 THEMES = {
-    "light": {"bg": "#FFFFFF", "fg": "#111111", "input_bg": "#FFFFFF", "border": "#CCCCCC"},
-    "dark": {"bg": "#0E1117", "fg": "#FAFAFA", "input_bg": "#262730", "border": "#555555"},
+    "light": {
+        "bg": "#FFFFFF", "fg": "#111111", "input_bg": "#FFFFFF",
+        "border": "#CCCCCC", "btn_bg": "#F0F0F0",
+    },
+    "dark": {
+        "bg": "#0E1117", "fg": "#FAFAFA", "input_bg": "#262730",
+        "border": "#555555", "btn_bg": "#262730",
+    },
 }
 
 
 def apply_theme(mode):
-    """Override the app background, header bar, text, and input colors for the theme."""
+    """Override the app background, header bar, text, inputs, and buttons for the theme."""
     c = THEMES[mode]
     st.markdown(
         f"""
         <style>
-          .stApp {{ background-color: {c["bg"]}; color: {c["fg"]}; }}
+          /* Pull content up toward the top, clear of the floating toolbar */
+          .block-container {{ padding-top: 2rem; }}
           header[data-testid="stHeader"] {{ background-color: {c["bg"]}; }}
+
+          .stApp {{ background-color: {c["bg"]}; color: {c["fg"]}; }}
           .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label,
           .stApp span, .stApp .stMarkdown {{ color: {c["fg"]} !important; }}
+
           /* Text input box */
           .stTextInput div[data-baseweb="input"],
           .stTextInput div[data-baseweb="base-input"] {{
@@ -88,6 +98,13 @@ def apply_theme(mode):
           }}
           .stTextInput input {{
               background-color: {c["input_bg"]} !important; color: {c["fg"]} !important;
+          }}
+
+          /* Buttons (Show + Download) */
+          .stButton > button, .stDownloadButton > button {{
+              background-color: {c["btn_bg"]} !important;
+              color: {c["fg"]} !important;
+              border: 1px solid {c["border"]} !important;
           }}
         </style>
         """,
