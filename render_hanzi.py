@@ -39,9 +39,7 @@ TRANSLATIONS = {
         "no_strokes": "此字沒有筆畫資料。",
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
         "stroke_failed": "第 {i} 筆繪製失敗：{e}",
-        "theme_label": "主題",
-        "light": "白天",
-        "dark": "黑夜",
+        "dark_mode": "黑夜模式",
     },
     "English": {
         "title": "Hanzi Stroke Viewer",
@@ -58,9 +56,7 @@ TRANSLATIONS = {
         "no_strokes": "This character has no stroke data.",
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
         "stroke_failed": "Stroke {i} failed to render: {e}",
-        "theme_label": "Theme",
-        "light": "Light",
-        "dark": "Dark",
+        "dark_mode": "Dark mode",
     },
 }
 
@@ -234,25 +230,21 @@ def resolve_char(word_input, t):
 
 
 # ── Language and theme selectors ──
-# Use stable option values with fixed keys so switching one selector never
-# resets the other (the labels are localized via format_func).
+# Language is a radio over language-independent values; theme is a plain boolean
+# toggle. Keeping the theme control free of options/format_func means switching
+# language can never desync or reset it (a bool has nothing to re-map).
 col_lang, col_theme = st.columns(2)
 with col_lang:
     lang = st.radio(
-        "🌐 Language / 語言",
+        "Language / 語言",
         list(TRANSLATIONS.keys()),
         horizontal=True,
         key="lang",
     )
 t = TRANSLATIONS[lang]
 with col_theme:
-    mode = st.radio(
-        t["theme_label"],
-        options=["light", "dark"],
-        format_func=lambda m: t[m],
-        horizontal=True,
-        key="theme",
-    )
+    dark_mode = st.toggle(t["dark_mode"], key="dark_mode")
+mode = "dark" if dark_mode else "light"
 apply_theme(mode)
 
 # ── UI ──
