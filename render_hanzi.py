@@ -122,20 +122,32 @@ def apply_theme(mode):
     )
 
 
-def get_char_data(ch, filepath="graphics.txt"):
-    """Look up a single character's stroke data in the makemeahanzi dataset."""
+@st.cache_resource(show_spinner=False)
+def load_index(filepath="graphics.txt"):
+    """Parse the dataset once into a {character: data} index.
+
+    Cached for the lifetime of the server so the 30 MB file is read only once,
+    making every character lookup O(1) instead of re-scanning the file.
+    """
+    index = {}
     with open(filepath, "r", encoding="utf-8") as f:
         for line in f:
             try:
                 data = json.loads(line)
-                if data.get("character") == ch:
-                    return data
             except json.JSONDecodeError:
                 continue
-    return None
+            ch = data.get("character")
+            if ch and ch not in index:
+                index[ch] = data
+    return index
 
 
-def build_figure(strokes, t):
+def get_char_data(ch):
+    """Look up a single character's stroke data (O(1) via the cached index)."""
+    return load_index().get(ch)
+
+
+def build_figure(strokes):
     """Draw the strokes onto a transparent Matplotlib figure, one color per stroke."""
     fig, ax = plt.subplots(figsize=(5, 5), facecolor="none")
     ax.set_aspect("equal")
@@ -152,8 +164,9 @@ def build_figure(strokes, t):
             color = STROKE_COLORS[i % len(STROKE_COLORS)]
             patch = PathPatch(path, facecolor=color, edgecolor=color, lw=0, alpha=0.9)
             ax.add_patch(patch)
-        except Exception as e:
-            st.warning(t["stroke_failed"].format(i=i + 1, e=e))
+        except Exception:
+            # Skip an unparseable stroke rather than failing the whole render.
+            continue
 
     return fig
 
@@ -164,6 +177,17 @@ def figure_to_png(fig):
     fig.savefig(buf, format="png", transparent=True, dpi=200, bbox_inches="tight")
     plt.close(fig)
     return buf.getvalue()
+
+
+@st.cache_data(show_spinner=False)
+def render_png(ch):
+    """Transparent PNG bytes for a character, cached so repeated renders (e.g.
+    when only the theme or language changed) return instantly instead of
+    re-running matplotlib."""
+    data = get_char_data(ch)
+    if not data or not data.get("strokes"):
+        return None
+    return figure_to_png(build_figure(data["strokes"]))
 
 
 def show_card(b64):
@@ -297,7 +321,7 @@ if ch:
     elif not data.get("strokes"):
         st.error(t["no_strokes"])
     else:
-        png_bytes = figure_to_png(build_figure(data["strokes"], t))
+        png_bytes = render_png(ch)
         b64 = base64.b64encode(png_bytes).decode()
 
         # Download and Copy buttons: same row as Show.
