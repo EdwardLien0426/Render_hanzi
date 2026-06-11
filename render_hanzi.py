@@ -39,9 +39,7 @@ TRANSLATIONS = {
         "no_strokes": "此字沒有筆畫資料。",
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
         "stroke_failed": "第 {i} 筆繪製失敗：{e}",
-        "theme_label": "主題",
-        "light": "白天",
-        "dark": "黑夜",
+        "dark_mode": "黑夜模式",
     },
     "English": {
         "title": "Hanzi Stroke Viewer",
@@ -58,9 +56,7 @@ TRANSLATIONS = {
         "no_strokes": "This character has no stroke data.",
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
         "stroke_failed": "Stroke {i} failed to render: {e}",
-        "theme_label": "Theme",
-        "light": "Light",
-        "dark": "Dark",
+        "dark_mode": "Dark mode",
     },
 }
 
@@ -276,20 +272,11 @@ with col_lang:
     )
 t = TRANSLATIONS[lang]
 with col_theme:
-    # The theme radio uses NO widget key and an explicit index driven by our own
-    # persisted bool. Within a language, the user's click persists (same widget
-    # identity). When the language changes, the option labels change so Streamlit
-    # treats it as a new widget and falls back to `index`, which we set from the
-    # persisted bool — so switching language never resets the theme.
-    theme_choice = st.radio(
-        t["theme_label"],
-        options=[t["light"], t["dark"]],
-        index=1 if st.session_state.get("dark", False) else 0,
-        horizontal=True,
-        label_visibility="collapsed",
-    )
-st.session_state["dark"] = theme_choice == t["dark"]
-mode = "dark" if st.session_state["dark"] else "light"
+    # A plain boolean toggle: no options and no format_func, so it can't snap
+    # back, reset, or desync when the language changes (every radio variant hits
+    # one of those Streamlit quirks). Only its label is translated.
+    dark_mode = st.toggle(t["dark_mode"], key="dark_mode")
+mode = "dark" if dark_mode else "light"
 apply_theme(mode)
 
 # ── UI ──
