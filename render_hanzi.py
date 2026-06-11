@@ -64,22 +64,31 @@ TRANSLATIONS = {
     },
 }
 
-# Background / text colors for each theme.
+# Background / text / input colors for each theme.
 THEMES = {
-    "light": {"bg": "#FFFFFF", "fg": "#111111"},
-    "dark": {"bg": "#0E1117", "fg": "#FAFAFA"},
+    "light": {"bg": "#FFFFFF", "fg": "#111111", "input_bg": "#FFFFFF", "border": "#CCCCCC"},
+    "dark": {"bg": "#0E1117", "fg": "#FAFAFA", "input_bg": "#262730", "border": "#555555"},
 }
 
 
 def apply_theme(mode):
-    """Override the app's background and text color for the chosen theme."""
+    """Override the app background, header bar, text, and input colors for the theme."""
     c = THEMES[mode]
     st.markdown(
         f"""
         <style>
           .stApp {{ background-color: {c["bg"]}; color: {c["fg"]}; }}
-          .stApp, .stApp p, .stApp label, .stApp span, .stApp h1, .stApp h2,
-          .stApp h3, .stApp .stMarkdown {{ color: {c["fg"]}; }}
+          header[data-testid="stHeader"] {{ background-color: {c["bg"]}; }}
+          .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label,
+          .stApp span, .stApp .stMarkdown {{ color: {c["fg"]} !important; }}
+          /* Text input box */
+          .stTextInput div[data-baseweb="input"],
+          .stTextInput div[data-baseweb="base-input"] {{
+              background-color: {c["input_bg"]}; border-color: {c["border"]};
+          }}
+          .stTextInput input {{
+              background-color: {c["input_bg"]} !important; color: {c["fg"]} !important;
+          }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -150,9 +159,11 @@ def copy_button(b64, t):
     Note: clipboard image writes require a secure context (HTTPS or localhost).
     """
     html = """
-    <div style="display:flex; gap:10px; align-items:center; font-family:sans-serif;">
-      <button id="copyBtn" style="padding:6px 14px; font-size:14px; cursor:pointer;
-              border:1px solid #ccc; border-radius:6px; background:#f6f6f6;">__LABEL__</button>
+    <style>html, body { margin:0; padding:0; }</style>
+    <div style="display:flex; gap:10px; align-items:center; height:38px; font-family:sans-serif;">
+      <button id="copyBtn" style="height:38px; padding:0 16px; font-size:14px; cursor:pointer;
+              border:1px solid rgba(128,128,128,0.4); border-radius:8px; background:#f6f6f6;
+              white-space:nowrap;">__LABEL__</button>
       <span id="copyStatus" style="font-size:13px; color:#2e7d32;"></span>
     </div>
     <script>
@@ -178,7 +189,7 @@ def copy_button(b64, t):
         .replace("__FAILED__", t["copy_failed"])
         .replace("__B64__", b64)
     )
-    components.html(html, height=50)
+    components.html(html, height=44)
 
 
 def resolve_char(word_input, t):
@@ -204,7 +215,6 @@ apply_theme(mode)
 
 # ── UI ──
 st.title(t["title"])
-st.caption(t["caption"])
 
 word_input = st.text_input(
     t["input_label"],
