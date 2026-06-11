@@ -2,6 +2,7 @@ import base64
 import json
 from io import BytesIO
 
+import matplotlib.patheffects as pe
 import matplotlib.pyplot as plt
 import streamlit as st
 import streamlit.components.v1 as components
@@ -40,6 +41,7 @@ TRANSLATIONS = {
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
         "stroke_failed": "第 {i} 筆繪製失敗：{e}",
         "dark_mode": "黑夜模式",
+        "numbers": "顯示筆順號碼",
     },
     "English": {
         "title": "Hanzi Stroke Viewer",
@@ -57,6 +59,7 @@ TRANSLATIONS = {
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
         "stroke_failed": "Stroke {i} failed to render: {e}",
         "dark_mode": "Dark mode",
+        "numbers": "Show stroke numbers",
     },
 }
 
@@ -143,8 +146,13 @@ def get_char_data(ch):
     return load_index().get(ch)
 
 
-def build_figure(strokes):
-    """Draw the strokes onto a transparent Matplotlib figure, one color per stroke."""
+def build_figure(strokes, medians=None, show_numbers=False):
+    """Draw the strokes onto a transparent Matplotlib figure, one color per stroke.
+
+    When show_numbers is set and stroke medians are available, the stroke-order
+    number is drawn at the start of each stroke with a white outline so it stays
+    legible over any stroke color.
+    """
     fig, ax = plt.subplots(figsize=(5, 5), facecolor="none")
     ax.set_aspect("equal")
     ax.axis("off")
@@ -164,6 +172,20 @@ def build_figure(strokes):
             # Skip an unparseable stroke rather than failing the whole render.
             continue
 
+    if show_numbers and medians:
+        for i, median in enumerate(medians):
+            if not median:
+                continue
+            x, y = median[len(median) // 2]  # middle of the stroke, not the edge
+            ax.text(
+                x, y, str(i + 1),
+                fontsize=10, color="white", alpha=0.9,
+                ha="center", va="center", zorder=10,
+                # Faint dark outline (not a bright halo) so numbers read as subtle
+                # labels that blend into the stroke instead of popping out.
+                path_effects=[pe.withStroke(linewidth=1.2, foreground=(0, 0, 0, 0.45))],
+            )
+
     return fig
 
 
@@ -176,14 +198,16 @@ def figure_to_png(fig):
 
 
 @st.cache_data(show_spinner=False)
-def render_png(ch):
-    """Transparent PNG bytes for a character, cached so repeated renders (e.g.
-    when only the theme or language changed) return instantly instead of
-    re-running matplotlib."""
+def render_png(ch, show_numbers=False):
+    """Transparent PNG bytes for a character, cached per (character, show_numbers)
+    so repeated renders (e.g. when only the theme or language changed) return
+    instantly instead of re-running matplotlib."""
     data = get_char_data(ch)
     if not data or not data.get("strokes"):
         return None
-    return figure_to_png(build_figure(data["strokes"]))
+    return figure_to_png(
+        build_figure(data["strokes"], data.get("medians"), show_numbers)
+    )
 
 
 def show_card(b64):
@@ -288,6 +312,8 @@ word_input = st.text_input(
     help=t["input_help"],
 )
 
+show_numbers = st.toggle(t["numbers"], value=True, key="numbers")
+
 # Action row: Show, Download, and Copy buttons sit side by side.
 col_show, col_download, col_copy = st.columns([1, 1, 2])
 show_btn = col_show.button(t["show"], use_container_width=True)
@@ -308,7 +334,7 @@ if ch:
     elif not data.get("strokes"):
         st.error(t["no_strokes"])
     else:
-        png_bytes = render_png(ch)
+        png_bytes = render_png(ch, show_numbers)
         b64 = base64.b64encode(png_bytes).decode()
 
         # Download and Copy buttons: same row as Show.
