@@ -1,0 +1,5 @@
+[theme]
+# Light is the app's real base theme so native widgets render correctly in
+# light mode without any CSS hacks. Dark mode is applied as an in-app override.
+base = "light"
+primaryColor = "#FF4B4B"

@@ -39,9 +39,9 @@ TRANSLATIONS = {
         "no_strokes": "此字沒有筆畫資料。",
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
         "stroke_failed": "第 {i} 筆繪製失敗：{e}",
-        "theme_label": "🎨 主題",
-        "light": "☀️ 白天",
-        "dark": "🌙 黑夜",
+        "theme_label": "主題",
+        "light": "白天",
+        "dark": "黑夜",
     },
     "English": {
         "title": "Hanzi Stroke Viewer",
@@ -58,9 +58,9 @@ TRANSLATIONS = {
         "no_strokes": "This character has no stroke data.",
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
         "stroke_failed": "Stroke {i} failed to render: {e}",
-        "theme_label": "🎨 Theme",
-        "light": "☀️ Light",
-        "dark": "🌙 Dark",
+        "theme_label": "Theme",
+        "light": "Light",
+        "dark": "Dark",
     },
 }
 
@@ -78,15 +78,25 @@ THEMES = {
 
 
 def apply_theme(mode):
-    """Override the app background, header bar, text, inputs, and buttons for the theme."""
-    c = THEMES[mode]
+    """Apply the chosen theme.
+
+    Light is the app's real base theme (see .streamlit/config.toml), so all
+    native widgets already render correctly and need no overrides. Dark mode is
+    applied as a CSS override on top of the light base. We deliberately do NOT
+    style the radio internals — that previously hid the baseweb mark and made
+    the circles vanish.
+    """
+    # Pull content up toward the top in both themes.
+    st.markdown("<style>.block-container { padding-top: 2rem; }</style>", unsafe_allow_html=True)
+
+    if mode == "light":
+        return
+
+    c = THEMES["dark"]
     st.markdown(
         f"""
         <style>
-          /* Pull content up toward the top, clear of the floating toolbar */
-          .block-container {{ padding-top: 2rem; }}
           header[data-testid="stHeader"] {{ background-color: {c["bg"]}; }}
-
           .stApp {{ background-color: {c["bg"]}; color: {c["fg"]}; }}
           .stApp h1, .stApp h2, .stApp h3, .stApp p, .stApp label,
           .stApp span, .stApp .stMarkdown {{ color: {c["fg"]} !important; }}
@@ -113,22 +123,6 @@ def apply_theme(mode):
         """,
         unsafe_allow_html=True,
     )
-
-    if mode == "light":
-        # In light theme, make unselected radio circles a visible empty outline
-        # (white fill, soft gray ring). Selected circles keep their default
-        # filled center.
-        st.markdown(
-            """
-            <style>
-              div[role="radiogroup"] label:has(input:not(:checked)) > div:first-child {
-                  background-color: #FFFFFF !important;
-                  border: 1px solid #888888 !important;
-              }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
 
 def get_char_data(ch, filepath="graphics.txt"):
@@ -270,33 +264,39 @@ word_input = st.text_input(
     help=t["input_help"],
 )
 
-# Action row: Show, Download, and Copy buttons sit side by side. The Download
-# and Copy buttons only appear once a character has been rendered into a PNG.
+# Action row: Show, Download, and Copy buttons sit side by side.
 col_show, col_download, col_copy = st.columns([1, 1, 2])
 show_btn = col_show.button(t["show"], use_container_width=True)
 
-if show_btn or word_input:
-    ch = resolve_char(word_input, t)
-    if ch:
-        data = get_char_data(ch)
-        if not data:
-            st.error(t["not_found"].format(ch=ch))
-        elif not data.get("strokes"):
-            st.error(t["no_strokes"])
-        else:
-            png_bytes = figure_to_png(build_figure(data["strokes"], t))
-            b64 = base64.b64encode(png_bytes).decode()
+# Resolve the character to display and remember it in session state. Driving the
+# render from session state (rather than the transient button/input values)
+# keeps the result and its buttons on screen across every rerun.
+if show_btn or word_input.strip():
+    candidate = resolve_char(word_input, t)
+    if candidate:
+        st.session_state["char"] = candidate
 
-            # Download and Copy buttons: same row as Show.
-            col_download.download_button(
-                t["download"],
-                data=png_bytes,
-                file_name=f"{ch}.png",
-                mime="image/png",
-                use_container_width=True,
-            )
-            with col_copy:
-                copy_button(b64, t)
+ch = st.session_state.get("char")
+if ch:
+    data = get_char_data(ch)
+    if not data:
+        st.error(t["not_found"].format(ch=ch))
+    elif not data.get("strokes"):
+        st.error(t["no_strokes"])
+    else:
+        png_bytes = figure_to_png(build_figure(data["strokes"], t))
+        b64 = base64.b64encode(png_bytes).decode()
 
-            # Rendered character on a white card, below the action row.
-            show_card(b64)
+        # Download and Copy buttons: same row as Show.
+        col_download.download_button(
+            t["download"],
+            data=png_bytes,
+            file_name=f"{ch}.png",
+            mime="image/png",
+            use_container_width=True,
+        )
+        with col_copy:
+            copy_button(b64, t)
+
+        # Rendered character on a white card, below the action row.
+        show_card(b64)
