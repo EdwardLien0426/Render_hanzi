@@ -96,8 +96,11 @@ def apply_theme(mode):
           .stTextInput div[data-baseweb="base-input"] {{
               background-color: {c["input_bg"]}; border-color: {c["border"]};
           }}
-          .stTextInput input {{
-              background-color: {c["input_bg"]} !important; color: {c["fg"]} !important;
+          .stTextInput input, .stTextInput input[type="text"] {{
+              background-color: {c["input_bg"]} !important;
+              color: {c["fg"]} !important;
+              -webkit-text-fill-color: {c["fg"]} !important;
+              caret-color: {c["fg"]} !important;
           }}
 
           /* Buttons (Show + Download) */
