@@ -4,6 +4,8 @@ A small [Streamlit](https://streamlit.io/) app that renders any Chinese characte
 stroke by stroke, giving each stroke a distinct color. Built on the
 [makemeahanzi](https://github.com/skishore/makemeahanzi) `graphics.txt` dataset.
 
+**🔗 Live demo:** <https://renderhanzigit-ra9powgf4tbak6besj8wje.streamlit.app/>
+
 ## Features
 
 - Render any single Chinese character from its stroke outlines.
