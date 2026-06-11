@@ -39,6 +39,9 @@ TRANSLATIONS = {
         "no_strokes": "此字沒有筆畫資料。",
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
         "stroke_failed": "第 {i} 筆繪製失敗：{e}",
+        "theme_label": "🎨 主題",
+        "light": "☀️ 白天",
+        "dark": "🌙 黑夜",
     },
     "English": {
         "title": "Hanzi Stroke Viewer",
@@ -55,8 +58,32 @@ TRANSLATIONS = {
         "no_strokes": "This character has no stroke data.",
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
         "stroke_failed": "Stroke {i} failed to render: {e}",
+        "theme_label": "🎨 Theme",
+        "light": "☀️ Light",
+        "dark": "🌙 Dark",
     },
 }
+
+# Background / text colors for each theme.
+THEMES = {
+    "light": {"bg": "#FFFFFF", "fg": "#111111"},
+    "dark": {"bg": "#0E1117", "fg": "#FAFAFA"},
+}
+
+
+def apply_theme(mode):
+    """Override the app's background and text color for the chosen theme."""
+    c = THEMES[mode]
+    st.markdown(
+        f"""
+        <style>
+          .stApp {{ background-color: {c["bg"]}; color: {c["fg"]}; }}
+          .stApp, .stApp p, .stApp label, .stApp span, .stApp h1, .stApp h2,
+          .stApp h3, .stApp .stMarkdown {{ color: {c["fg"]}; }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def get_char_data(ch, filepath="graphics.txt"):
@@ -103,12 +130,25 @@ def figure_to_png(fig):
     return buf.getvalue()
 
 
-def copy_button(png_bytes, t):
+def show_card(b64):
+    """Display the rendered character on a white card so every stroke color stays
+    visible regardless of the app theme (the black stroke in particular)."""
+    st.markdown(
+        f"""
+        <div style="background:#FFFFFF; border-radius:12px; padding:16px;
+                    display:inline-block; box-shadow:0 2px 10px rgba(0,0,0,0.2);">
+          <img src="data:image/png;base64,{b64}" style="display:block; width:360px;"/>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def copy_button(b64, t):
     """Render an HTML button that copies the PNG to the clipboard via the Clipboard API.
 
     Note: clipboard image writes require a secure context (HTTPS or localhost).
     """
-    b64 = base64.b64encode(png_bytes).decode()
     html = """
     <div style="display:flex; gap:10px; align-items:center; font-family:sans-serif;">
       <button id="copyBtn" style="padding:6px 14px; font-size:14px; cursor:pointer;
@@ -152,9 +192,15 @@ def resolve_char(word_input, t):
     return ch
 
 
-# ── Language selector ──
-lang = st.radio("🌐 Language / 語言", list(TRANSLATIONS.keys()), horizontal=True)
+# ── Language and theme selectors ──
+col_lang, col_theme = st.columns(2)
+with col_lang:
+    lang = st.radio("🌐 Language / 語言", list(TRANSLATIONS.keys()), horizontal=True)
 t = TRANSLATIONS[lang]
+with col_theme:
+    theme_choice = st.radio(t["theme_label"], [t["light"], t["dark"]], horizontal=True)
+mode = "dark" if theme_choice == t["dark"] else "light"
+apply_theme(mode)
 
 # ── UI ──
 st.title(t["title"])
@@ -181,6 +227,7 @@ if show_btn or word_input:
             st.error(t["no_strokes"])
         else:
             png_bytes = figure_to_png(build_figure(data["strokes"], t))
+            b64 = base64.b64encode(png_bytes).decode()
 
             # Download and Copy buttons: same row as Show.
             col_download.download_button(
@@ -191,7 +238,7 @@ if show_btn or word_input:
                 use_container_width=True,
             )
             with col_copy:
-                copy_button(png_bytes, t)
+                copy_button(b64, t)
 
-            # Rendered character below the action row.
-            st.image(png_bytes, use_container_width=False)
+            # Rendered character on a white card, below the action row.
+            show_card(b64)

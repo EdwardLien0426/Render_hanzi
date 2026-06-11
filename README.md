@@ -14,6 +14,8 @@ stroke by stroke, giving each stroke a distinct color. Built on the
 - **Download** the rendered image as a PNG.
 - **Copy** the image straight to your clipboard.
 - Bilingual UI: switch between **中文** and **English**.
+- Light / dark theme toggle (☀️ / 🌙). The character is always shown on a white
+  card so every stroke color stays visible in both themes.
 
 ## Requirements
 
