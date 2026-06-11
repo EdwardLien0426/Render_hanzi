@@ -31,10 +31,10 @@ TRANSLATIONS = {
         "input_placeholder": "輸入完成後按 Enter，或點「顯示」",
         "input_help": "支援注音／拼音輸入法，選好字後按 Enter。",
         "show": "顯示",
-        "copy": "📋 複製圖片",
+        "copy": "複製圖片",
         "copied": "已複製到剪貼簿！",
         "copy_failed": "複製失敗：",
-        "download": "⬇️ 下載 PNG",
+        "download": "下載 PNG",
         "not_found": "找不到字「{ch}」",
         "no_strokes": "此字沒有筆畫資料。",
         "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
@@ -50,10 +50,10 @@ TRANSLATIONS = {
         "input_placeholder": "Type a character and press Enter, or click Show",
         "input_help": "Works with Zhuyin/Pinyin IMEs. After selecting the character, press Enter.",
         "show": "Show",
-        "copy": "📋 Copy image",
+        "copy": "Copy image",
         "copied": "Copied to clipboard!",
         "copy_failed": "Copy failed: ",
-        "download": "⬇️ Download PNG",
+        "download": "Download PNG",
         "not_found": "Character not found: 「{ch}」",
         "no_strokes": "This character has no stroke data.",
         "multi": "Multiple characters detected; showing only the first: 「{ch}」",
@@ -182,18 +182,20 @@ def show_card(b64):
     )
 
 
-def copy_button(b64, t):
+def copy_button(b64, t, colors):
     """Render an HTML button that copies the PNG to the clipboard via the Clipboard API.
 
-    Note: clipboard image writes require a secure context (HTTPS or localhost).
+    The button lives in an isolated iframe that the app's theme CSS can't reach,
+    so the theme colors are injected directly. Note: clipboard image writes
+    require a secure context (HTTPS or localhost).
     """
     html = """
-    <style>html, body { margin:0; padding:0; }</style>
+    <style>html, body { margin:0; padding:0; background:transparent; }</style>
     <div style="display:flex; gap:10px; align-items:center; height:38px; font-family:sans-serif;">
       <button id="copyBtn" style="height:38px; padding:0 16px; font-size:14px; cursor:pointer;
-              border:1px solid rgba(128,128,128,0.4); border-radius:8px; background:#f6f6f6;
-              white-space:nowrap;">__LABEL__</button>
-      <span id="copyStatus" style="font-size:13px; color:#2e7d32;"></span>
+              border:1px solid __BORDER__; border-radius:8px; background:__BTNBG__;
+              color:__FG__; white-space:nowrap;">__LABEL__</button>
+      <span id="copyStatus" style="font-size:13px; color:#4caf50;"></span>
     </div>
     <script>
       const b64 = "__B64__";
@@ -203,10 +205,10 @@ def copy_button(b64, t):
           const res = await fetch("data:image/png;base64," + b64);
           const blob = await res.blob();
           await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]);
-          status.style.color = "#2e7d32";
+          status.style.color = "#4caf50";
           status.textContent = "__COPIED__";
         } catch (e) {
-          status.style.color = "#c62828";
+          status.style.color = "#e57373";
           status.textContent = "__FAILED__" + e;
         }
       });
@@ -216,6 +218,9 @@ def copy_button(b64, t):
         html.replace("__LABEL__", t["copy"])
         .replace("__COPIED__", t["copied"])
         .replace("__FAILED__", t["copy_failed"])
+        .replace("__BTNBG__", colors["btn_bg"])
+        .replace("__FG__", colors["fg"])
+        .replace("__BORDER__", colors["border"])
         .replace("__B64__", b64)
     )
     components.html(html, height=44)
@@ -304,7 +309,7 @@ if ch:
             use_container_width=True,
         )
         with col_copy:
-            copy_button(b64, t)
+            copy_button(b64, t, THEMES[mode])
 
         # Rendered character on a white card, below the action row.
         show_card(b64)
