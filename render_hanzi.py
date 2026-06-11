@@ -115,14 +115,15 @@ def apply_theme(mode):
     )
 
     if mode == "light":
-        # Unselected radio circles: white fill with a black ring so they stay
-        # visible on the white background.
+        # In light theme, make unselected radio circles a visible empty outline
+        # (white fill, soft gray ring). Selected circles keep their default
+        # filled center.
         st.markdown(
             """
             <style>
-              div[role="radiogroup"] label > div:first-child {
+              div[role="radiogroup"] label:has(input:not(:checked)) > div:first-child {
                   background-color: #FFFFFF !important;
-                  border: 2px solid #111111 !important;
+                  border: 1px solid #888888 !important;
               }
             </style>
             """,
@@ -239,13 +240,25 @@ def resolve_char(word_input, t):
 
 
 # ── Language and theme selectors ──
+# Use stable option values with fixed keys so switching one selector never
+# resets the other (the labels are localized via format_func).
 col_lang, col_theme = st.columns(2)
 with col_lang:
-    lang = st.radio("🌐 Language / 語言", list(TRANSLATIONS.keys()), horizontal=True)
+    lang = st.radio(
+        "🌐 Language / 語言",
+        list(TRANSLATIONS.keys()),
+        horizontal=True,
+        key="lang",
+    )
 t = TRANSLATIONS[lang]
 with col_theme:
-    theme_choice = st.radio(t["theme_label"], [t["light"], t["dark"]], horizontal=True)
-mode = "dark" if theme_choice == t["dark"] else "light"
+    mode = st.radio(
+        t["theme_label"],
+        options=["light", "dark"],
+        format_func=lambda m: t[m],
+        horizontal=True,
+        key="theme",
+    )
 apply_theme(mode)
 
 # ── UI ──
