@@ -114,6 +114,21 @@ def apply_theme(mode):
         unsafe_allow_html=True,
     )
 
+    if mode == "light":
+        # Unselected radio circles: white fill with a black ring so they stay
+        # visible on the white background.
+        st.markdown(
+            """
+            <style>
+              div[role="radiogroup"] label > div:first-child {
+                  background-color: #FFFFFF !important;
+                  border: 2px solid #111111 !important;
+              }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
 
 def get_char_data(ch, filepath="graphics.txt"):
     """Look up a single character's stroke data in the makemeahanzi dataset."""
