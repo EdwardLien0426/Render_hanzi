@@ -22,6 +22,42 @@ STROKE_COLORS = [
     "#8B4513",  # brown
 ]
 
+# UI strings for each supported language.
+TRANSLATIONS = {
+    "中文": {
+        "title": "漢字筆畫顯示器",
+        "caption": "使用 makemeahanzi graphics.txt 資料，每一筆畫以不同顏色顯示。",
+        "input_label": "請輸入一個漢字：",
+        "input_placeholder": "輸入完成後按 Enter，或點「顯示」",
+        "input_help": "支援注音／拼音輸入法，選好字後按 Enter。",
+        "show": "顯示",
+        "copy": "📋 複製圖片",
+        "copied": "已複製到剪貼簿！",
+        "copy_failed": "複製失敗：",
+        "download": "⬇️ 下載 PNG",
+        "not_found": "找不到字「{ch}」",
+        "no_strokes": "此字沒有筆畫資料。",
+        "multi": "偵測到多個字元，只顯示第一個字：「{ch}」",
+        "stroke_failed": "第 {i} 筆繪製失敗：{e}",
+    },
+    "English": {
+        "title": "Hanzi Stroke Viewer",
+        "caption": "Renders each stroke in a distinct color using the makemeahanzi graphics.txt dataset.",
+        "input_label": "Enter a Chinese character:",
+        "input_placeholder": "Type a character and press Enter, or click Show",
+        "input_help": "Works with Zhuyin/Pinyin IMEs. After selecting the character, press Enter.",
+        "show": "Show",
+        "copy": "📋 Copy image",
+        "copied": "Copied to clipboard!",
+        "copy_failed": "Copy failed: ",
+        "download": "⬇️ Download PNG",
+        "not_found": "Character not found: 「{ch}」",
+        "no_strokes": "This character has no stroke data.",
+        "multi": "Multiple characters detected; showing only the first: 「{ch}」",
+        "stroke_failed": "Stroke {i} failed to render: {e}",
+    },
+}
+
 
 def get_char_data(ch, filepath="graphics.txt"):
     """Look up a single character's stroke data in the makemeahanzi dataset."""
@@ -36,7 +72,7 @@ def get_char_data(ch, filepath="graphics.txt"):
     return None
 
 
-def build_figure(strokes):
+def build_figure(strokes, t):
     """Draw the strokes onto a transparent Matplotlib figure, one color per stroke."""
     fig, ax = plt.subplots(figsize=(5, 5), facecolor="none")
     ax.set_aspect("equal")
@@ -54,7 +90,7 @@ def build_figure(strokes):
             patch = PathPatch(path, facecolor=color, edgecolor=color, lw=0, alpha=0.9)
             ax.add_patch(patch)
         except Exception as e:
-            st.warning(f"Stroke {i + 1} failed to render: {e}")
+            st.warning(t["stroke_failed"].format(i=i + 1, e=e))
 
     return fig
 
@@ -67,7 +103,7 @@ def figure_to_png(fig):
     return buf.getvalue()
 
 
-def copy_button(png_bytes, label="📋 Copy image"):
+def copy_button(png_bytes, t):
     """Render an HTML button that copies the PNG to the clipboard via the Clipboard API.
 
     Note: clipboard image writes require a secure context (HTTPS or localhost).
@@ -88,63 +124,74 @@ def copy_button(png_bytes, label="📋 Copy image"):
           const blob = await res.blob();
           await navigator.clipboard.write([new ClipboardItem({"image/png": blob})]);
           status.style.color = "#2e7d32";
-          status.textContent = "Copied to clipboard!";
+          status.textContent = "__COPIED__";
         } catch (e) {
           status.style.color = "#c62828";
-          status.textContent = "Copy failed: " + e;
+          status.textContent = "__FAILED__" + e;
         }
       });
     </script>
     """
-    html = html.replace("__LABEL__", label).replace("__B64__", b64)
+    html = (
+        html.replace("__LABEL__", t["copy"])
+        .replace("__COPIED__", t["copied"])
+        .replace("__FAILED__", t["copy_failed"])
+        .replace("__B64__", b64)
+    )
     components.html(html, height=50)
 
 
-def render_char(ch):
-    """Render a character and show it with download and copy controls."""
-    data = get_char_data(ch)
-    if not data:
-        st.error(f"Character not found: 「{ch}」")
-        return
+def resolve_char(word_input, t):
+    """Return the first character of the input, warning if extra characters were given."""
+    cleaned = word_input.strip()
+    if not cleaned:
+        return None
+    ch = cleaned[0]
+    if len(cleaned) > 1:
+        st.info(t["multi"].format(ch=ch))
+    return ch
 
-    strokes = data.get("strokes", [])
-    if not strokes:
-        st.error("This character has no stroke data.")
-        return
 
-    png_bytes = figure_to_png(build_figure(strokes))
-
-    st.image(png_bytes, use_container_width=False)
-
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.download_button(
-            "⬇️ Download PNG",
-            data=png_bytes,
-            file_name=f"{ch}.png",
-            mime="image/png",
-        )
-    with col2:
-        copy_button(png_bytes)
-
+# ── Language selector ──
+lang = st.radio("🌐 Language / 語言", list(TRANSLATIONS.keys()), horizontal=True)
+t = TRANSLATIONS[lang]
 
 # ── UI ──
-st.title("Hanzi Stroke Viewer")
-st.caption("Renders each stroke in a distinct color using the makemeahanzi graphics.txt dataset.")
+st.title(t["title"])
+st.caption(t["caption"])
 
 word_input = st.text_input(
-    "Enter a Chinese character:",
-    placeholder="Type a character and press Enter, or click Show",
-    help="Works with Zhuyin/Pinyin IMEs. After selecting the character, press Enter.",
+    t["input_label"],
+    placeholder=t["input_placeholder"],
+    help=t["input_help"],
 )
 
-show_btn = st.button("Show", use_container_width=False)
+# Action row: Show, Download, and Copy buttons sit side by side. The Download
+# and Copy buttons only appear once a character has been rendered into a PNG.
+col_show, col_download, col_copy = st.columns([1, 1, 2])
+show_btn = col_show.button(t["show"], use_container_width=True)
 
 if show_btn or word_input:
-    # Take the first non-whitespace character of the input.
-    cleaned = word_input.strip()
-    if cleaned:
-        ch = cleaned[0]
-        if len(cleaned) > 1:
-            st.info(f"Multiple characters detected; showing only the first: 「{ch}」")
-        render_char(ch)
+    ch = resolve_char(word_input, t)
+    if ch:
+        data = get_char_data(ch)
+        if not data:
+            st.error(t["not_found"].format(ch=ch))
+        elif not data.get("strokes"):
+            st.error(t["no_strokes"])
+        else:
+            png_bytes = figure_to_png(build_figure(data["strokes"], t))
+
+            # Download and Copy buttons: same row as Show.
+            col_download.download_button(
+                t["download"],
+                data=png_bytes,
+                file_name=f"{ch}.png",
+                mime="image/png",
+                use_container_width=True,
+            )
+            with col_copy:
+                copy_button(png_bytes, t)
+
+            # Rendered character below the action row.
+            st.image(png_bytes, use_container_width=False)

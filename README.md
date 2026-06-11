@@ -13,6 +13,7 @@ stroke by stroke, giving each stroke a distinct color. Built on the
 - Transparent PNG output.
 - **Download** the rendered image as a PNG.
 - **Copy** the image straight to your clipboard.
+- Bilingual UI: switch between **中文** and **English**.
 
 ## Requirements
 
